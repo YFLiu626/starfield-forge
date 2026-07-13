@@ -12,7 +12,8 @@
     "package:installer": "npm run build && electron-builder --win nsis --x64",
     "package:win": "npm run build && electron-builder --win portable --x64",
     "preview": "vite preview --host 127.0.0.1",
-    "serve": "node scripts/serve-dist.mjs"
+    "serve": "node scripts/serve-dist.mjs",
+    "test": "node --test"
   },
   "dependencies": {
     "lucide": "^1.21.0",
@@ -39,7 +40,8 @@
     "extraMetadata": {
       "name": "starfield-forge",
       "description": "Image-driven 3D starfield video generator",
-      "author": "Local"
+      "author": "Yifei Liu",
+      "license": "MIT"
     },
     "win": {
       "icon": "build/icon.ico",
@@ -62,5 +64,19 @@
       "shortcutName": "3D 星场生成器",
       "uninstallDisplayName": "3D 星场生成器"
     }
+  },
+  "description": "Create animated 3D starfield videos from matched starless and stars-only astrophotography images.",
+  "author": "Yifei Liu",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YFLiu626/starfield-forge.git"
+  },
+  "homepage": "https://github.com/YFLiu626/starfield-forge#readme",
+  "bugs": {
+    "url": "https://github.com/YFLiu626/starfield-forge/issues"
+  },
+  "engines": {
+    "node": ">=20.19.0"
   }
 }
