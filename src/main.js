@@ -702,25 +702,39 @@ function bindControls() {
     const file = event.target.files?.[0];
     if (!file) return;
     const nameLabel = document.querySelector("#background-name");
-    nameLabel.removeAttribute("data-i18n");
-    nameLabel.textContent = file.name;
-    state.backgroundImage = await loadImage(file);
-    setSourceSizeFromImage(state.backgroundImage);
-    applyBackgroundImage();
-    setStatus(state.starsImage ? statusText("starlessLoaded") : statusText("starlessWaiting"));
-    if (state.starsImage) processImages();
+    try {
+      assertSupportedImageFile(file);
+      nameLabel.removeAttribute("data-i18n");
+      nameLabel.textContent = file.name;
+      state.backgroundImage = await loadImage(file);
+      setSourceSizeFromImage(state.backgroundImage);
+      applyBackgroundImage();
+      setStatus(state.starsImage ? statusText("starlessLoaded") : statusText("starlessWaiting"));
+      if (state.starsImage) processImages();
+    } catch (error) {
+      event.target.value = "";
+      nameLabel.textContent = state.language === "zh" ? "格式不支持" : "Unsupported format";
+      setStatus(error.message);
+    }
   });
 
   document.querySelector("#stars-upload").addEventListener("change", async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
     const nameLabel = document.querySelector("#stars-name");
-    nameLabel.removeAttribute("data-i18n");
-    nameLabel.textContent = file.name;
-    state.starsImage = await loadImage(file);
-    setSourceSizeFromImage(state.starsImage);
-    setStatus(statusText("starsLoaded"));
-    if (state.backgroundImage) processImages();
+    try {
+      assertSupportedImageFile(file);
+      nameLabel.removeAttribute("data-i18n");
+      nameLabel.textContent = file.name;
+      state.starsImage = await loadImage(file);
+      setSourceSizeFromImage(state.starsImage);
+      setStatus(statusText("starsLoaded"));
+      if (state.backgroundImage) processImages();
+    } catch (error) {
+      event.target.value = "";
+      nameLabel.textContent = state.language === "zh" ? "格式不支持" : "Unsupported format";
+      setStatus(error.message);
+    }
   });
 
   document.querySelector("#process-images").addEventListener("click", processImages);
@@ -1912,6 +1926,19 @@ function imageToPlaneNdc(x01, y01) {
 
 function viewportHeightAtDepth(depth) {
   return 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5)) * depth;
+}
+
+const supportedImageExtensions = new Set(["tif", "tiff", "png", "jpg", "jpeg", "webp", "bmp"]);
+
+function assertSupportedImageFile(file) {
+  const extension = file.name?.split(".").pop()?.toLowerCase() || "";
+  if (supportedImageExtensions.has(extension)) return;
+  const formats = "TIF, TIFF, PNG, JPG, JPEG, WebP, BMP";
+  throw new Error(
+    state.language === "zh"
+      ? `不支持该文件格式。请选择：${formats}`
+      : `Unsupported image format. Choose: ${formats}`
+  );
 }
 
 async function loadImage(file) {

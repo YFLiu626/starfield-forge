@@ -30,4 +30,7 @@ test("HTML references the application entry module", async () => {
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
   assert.match(html, /src\/main\.js/);
   assert.match(html, /id="star-canvas"/);
+  assert.match(html, /\.tif/);
+  assert.match(html, /\.tiff/);
+  assert.match(html, /image\/x-tiff/);
 });
