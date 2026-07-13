@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#07141a" />
+    <title>3D 星场生成器</title>
+  </head>
+  <body>
+    <main id="app-shell">
+      <header class="topbar" aria-label="quick actions">
+        <div class="brand">
+          <span class="brand-mark">3D</span>
+          <div>
+            <h1>3D 星场生成器</h1>
+            <span id="scene-readout-compact" data-scene-readout data-i18n="readout.waiting"
+              >请上传去星图和星点图</span
+            >
+          </div>
+        </div>
+
+        <div class="action-row">
+          <select id="language-select" class="lang-select" aria-label="Language">
+            <option value="zh">中文</option>
+            <option value="en">EN</option>
+          </select>
+          <button id="pause-toggle" class="icon-button" type="button" title="Pause / play" aria-label="Pause / play">
+            <i data-lucide="pause"></i>
+          </button>
+          <button id="fit-toggle" class="icon-button" type="button" title="Toggle fit mode" aria-label="Toggle fit mode">
+            <i data-lucide="maximize-2"></i>
+          </button>
+          <button id="capture-png" class="icon-button accent" type="button" title="Export PNG" aria-label="Export PNG">
+            <i data-lucide="camera"></i>
+          </button>
+          <button id="record-webm" class="icon-button hot" type="button" title="Record video" aria-label="Record video">
+            <i data-lucide="video"></i>
+          </button>
+        </div>
+      </header>
+
+      <div class="workspace">
+        <aside class="control-dock" aria-label="image starfield controls">
+          <div class="dock-head">
+            <div class="dock-title">
+              <span class="dock-icon">&#9655;</span>
+              <div>
+                <h2 data-i18n="dock.title">控制面板</h2>
+                <p data-i18n="dock.subtitle">按参考工具的分组方式整理参数与导出设置</p>
+              </div>
+            </div>
+            <div class="mini-actions">
+              <button id="reset-scene" class="tiny-button" type="button">
+                <i data-lucide="rotate-ccw"></i>
+                <span data-i18n="dock.reset">重置</span>
+              </button>
+              <button id="rebuild-depth" class="tiny-button" type="button">
+                <i data-lucide="refresh-cw"></i>
+                <span data-i18n="dock.rebuild">重算</span>
+              </button>
+            </div>
+          </div>
+
+          <section class="control-section is-open" data-section="source">
+            <button class="section-toggle is-open" type="button" data-toggle-section="source">
+              <span data-i18n="section.source">上传图像</span>
+              <span class="toggle-mark">+</span>
+            </button>
+            <div class="section-body">
+              <div class="upload-grid">
+                <label class="upload-tile upload-tile-stars">
+                  <input id="stars-upload" type="file" accept="image/*,.tif,.tiff,image/tiff" />
+                  <i data-lucide="sparkles"></i>
+                  <span data-i18n="upload.stars">星点图</span>
+                  <small id="stars-name" data-i18n="common.none">未选择</small>
+                </label>
+                <label class="upload-tile upload-tile-bg">
+                  <input id="background-upload" type="file" accept="image/*,.tif,.tiff,image/tiff" />
+                  <i data-lucide="image-up"></i>
+                  <span data-i18n="upload.starless">去星图</span>
+                  <small id="background-name" data-i18n="common.none">未选择</small>
+                </label>
+              </div>
+
+              <div class="two-col compact-actions">
+                <button id="rotate-source" class="wide-button ghost" type="button">
+                  <i data-lucide="refresh-cw"></i>
+                  <span data-i18n="source.rotate90">顺时针旋转 90°</span>
+                </button>
+                <button id="process-images" class="wide-button" type="button">
+                  <i data-lucide="wand-sparkles"></i>
+                  <span data-i18n="source.build">处理并生成</span>
+                </button>
+              </div>
+
+              <div class="panel-block">
+                <label class="control-row">
+                  <span data-i18n="source.maxStars">最大星点</span>
+                  <output data-output="maxStars">18000</output>
+                </label>
+                <input type="range" data-setting="maxStars" min="1000" max="50000" step="500" value="18000" />
+
+                <label class="control-row">
+                  <span data-i18n="source.threshold">提取阈值</span>
+                  <output data-output="threshold">0.14</output>
+                </label>
+                <input type="range" data-setting="threshold" min="0.04" max="0.55" step="0.01" value="0.14" />
+
+                <label class="control-row">
+                  <span data-i18n="source.sampleScale">采样精度</span>
+                  <output data-output="sampleScale">0.70x</output>
+                </label>
+                <input type="range" data-setting="sampleScale" min="0.25" max="1" step="0.05" value="0.7" />
+                <div class="toggle-line">
+                  <span data-i18n="source.boostFaint">增强暗星</span>
+                  <input type="checkbox" data-setting="boostFaintStars" checked />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="control-section is-open" data-section="stars">
+            <button class="section-toggle is-open" type="button" data-toggle-section="stars">
+              <span data-i18n="section.stars">星点控制</span>
+              <span class="toggle-mark">+</span>
+            </button>
+            <div class="section-body">
+              <div class="panel-block">
+                <label class="control-row">
+                  <span data-i18n="depth.layers">图层数量</span>
+                  <output data-output="layerCount">36</output>
+                </label>
+                <input type="range" data-setting="layerCount" min="4" max="64" step="1" value="36" />
+
+                <label class="control-row">
+                  <span data-i18n="depth.range">3D 强度</span>
+                  <output data-output="depthRange">1000</output>
+                </label>
+                <input type="range" data-setting="depthRange" min="100" max="3000" step="25" value="1000" />
+
+                <label class="control-row">
+                  <span data-i18n="depth.starRetention">亮星前景权重</span>
+                  <output data-output="brightNear">0.65</output>
+                </label>
+                <input type="range" data-setting="brightNear" min="0" max="1" step="0.05" value="0.65" />
+
+                <label class="control-row">
+                  <span data-i18n="depth.starSize">星点显示大小</span>
+                  <output data-output="starScale">1.00</output>
+                </label>
+                <input type="range" data-setting="starScale" min="0.35" max="2.5" step="0.05" value="1" />
+
+                <label class="control-row">
+                  <span data-i18n="depth.starBrightness">星点透明度强度</span>
+                  <output data-output="starBrightness">1.25</output>
+                </label>
+                <input type="range" data-setting="starBrightness" min="0.3" max="3" step="0.05" value="1.25" />
+
+                <label class="control-row">
+                  <span data-i18n="depth.starOpacity">星点整体透明度</span>
+                  <output data-output="starOpacity">100%</output>
+                </label>
+                <input type="range" data-setting="starOpacity" min="0" max="1.5" step="0.05" value="1" />
+
+                <label class="control-row">
+                  <span data-i18n="depth.backgroundBrightness">背景亮度</span>
+                  <output data-output="backgroundBrightness">1.00</output>
+                </label>
+                <input type="range" data-setting="backgroundBrightness" min="0.25" max="2" step="0.05" value="1" />
+              </div>
+            </div>
+          </section>
+
+          <section class="control-section is-open" data-section="motion">
+            <button class="section-toggle is-open" type="button" data-toggle-section="motion">
+              <span data-i18n="section.motion">动作类型</span>
+              <span class="toggle-mark">+</span>
+            </button>
+            <div class="section-body">
+              <div class="panel-block">
+                <label>
+                  <span data-i18n="motion.starPreset">星层动作预设</span>
+                  <select data-setting="starMotionPreset">
+                    <option value="zoomIn" data-i18n="preset.zoomIn">拉近飞过</option>
+                    <option value="zoomOut" data-i18n="preset.zoomOut">拉远退场</option>
+                    <option value="panLeft" data-i18n="preset.panLeft">向左飞过</option>
+                    <option value="panRight" data-i18n="preset.panRight">向右飞过</option>
+                    <option value="panUp" data-i18n="preset.panUp">向上飞过</option>
+                    <option value="panDown" data-i18n="preset.panDown">向下飞过</option>
+                    <option value="panUpLeft" data-i18n="preset.panUpLeft">左上飞过</option>
+                    <option value="panUpRight" data-i18n="preset.panUpRight">右上飞过</option>
+                    <option value="panDownLeft" data-i18n="preset.panDownLeft">左下飞过</option>
+                    <option value="panDownRight" data-i18n="preset.panDownRight">右下飞过</option>
+                    <option value="zoomInLeft" data-i18n="preset.zoomInLeft">拉近 + 向左</option>
+                    <option value="zoomInRight" data-i18n="preset.zoomInRight">拉近 + 向右</option>
+                    <option value="zoomInUp" data-i18n="preset.zoomInUp">拉近 + 向上</option>
+                    <option value="zoomInDown" data-i18n="preset.zoomInDown">拉近 + 向下</option>
+                    <option value="zoomInUpLeft" data-i18n="preset.zoomInUpLeft">拉近 + 左上</option>
+                    <option value="zoomInUpRight" data-i18n="preset.zoomInUpRight">拉近 + 右上</option>
+                    <option value="zoomInDownLeft" data-i18n="preset.zoomInDownLeft">拉近 + 左下</option>
+                    <option value="zoomInDownRight" data-i18n="preset.zoomInDownRight">拉近 + 右下</option>
+                    <option value="zoomOutLeft" data-i18n="preset.zoomOutLeft">拉远 + 向左</option>
+                    <option value="zoomOutRight" data-i18n="preset.zoomOutRight">拉远 + 向右</option>
+                    <option value="zoomOutUp" data-i18n="preset.zoomOutUp">拉远 + 向上</option>
+                    <option value="zoomOutDown" data-i18n="preset.zoomOutDown">拉远 + 向下</option>
+                    <option value="zoomOutUpLeft" data-i18n="preset.zoomOutUpLeft">拉远 + 左上</option>
+                    <option value="zoomOutUpRight" data-i18n="preset.zoomOutUpRight">拉远 + 右上</option>
+                    <option value="zoomOutDownLeft" data-i18n="preset.zoomOutDownLeft">拉远 + 左下</option>
+                    <option value="zoomOutDownRight" data-i18n="preset.zoomOutDownRight">拉远 + 右下</option>
+                    <option value="orbit" data-i18n="preset.orbit">环绕</option>
+                    <option value="fixed" data-i18n="preset.fixed">固定</option>
+                  </select>
+                </label>
+                <label>
+                  <span data-i18n="motion.backgroundPreset">去星层动作预设</span>
+                  <select data-setting="backgroundMotionPreset">
+                    <option value="zoomIn" data-i18n="preset.bgZoomIn">星云拉近</option>
+                    <option value="zoomOut" data-i18n="preset.bgZoomOut">星云拉远</option>
+                    <option value="panLeft" data-i18n="preset.panLeft">向左飞过</option>
+                    <option value="panRight" data-i18n="preset.panRight">向右飞过</option>
+                    <option value="panUp" data-i18n="preset.panUp">向上飞过</option>
+                    <option value="panDown" data-i18n="preset.panDown">向下飞过</option>
+                    <option value="panUpLeft" data-i18n="preset.panUpLeft">左上飞过</option>
+                    <option value="panUpRight" data-i18n="preset.panUpRight">右上飞过</option>
+                    <option value="panDownLeft" data-i18n="preset.panDownLeft">左下飞过</option>
+                    <option value="panDownRight" data-i18n="preset.panDownRight">右下飞过</option>
+                    <option value="drift" data-i18n="preset.drift">自由漂移</option>
+                    <option value="zoomPulse" data-i18n="preset.zoomPulse">缩放脉冲</option>
+                    <option value="orbit" data-i18n="preset.orbit">环绕</option>
+                    <option value="fixed" data-i18n="preset.fixed">固定</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="focus-card">
+                <div class="control-row">
+                  <span data-i18n="motion.focus">缩放焦点</span>
+                  <button id="reset-focus" class="micro-button" type="button" data-i18n="motion.resetFocus">重置</button>
+                </div>
+                <p class="helper-text" id="focus-readout">当前: [50%, 50%]</p>
+                <div id="focus-pad" class="focus-pad" aria-label="focus target selector">
+                  <div class="focus-grid"></div>
+                  <button id="focus-target" class="focus-target" type="button" aria-label="Current focus target"></button>
+                </div>
+              </div>
+
+              <div class="panel-block">
+                <label class="control-row">
+                  <span data-i18n="motion.rotationAngle">旋转角度</span>
+                  <output data-output="rotationAngle">0°</output>
+                </label>
+                <input type="range" data-setting="rotationAngle" min="0" max="180" step="1" value="0" />
+
+                <div class="radio-row">
+                  <label><input type="radio" name="rotationDirection" value="cw" data-setting="rotationDirection" checked /> <span data-i18n="motion.clockwise">顺时针</span></label>
+                  <label><input type="radio" name="rotationDirection" value="ccw" data-setting="rotationDirection" /> <span data-i18n="motion.counterClockwise">逆时针</span></label>
+                </div>
+
+                <label class="control-row">
+                  <span data-i18n="motion.actionZoom">去星层动作放大</span>
+                  <output data-output="actionZoom">112%</output>
+                </label>
+                <input type="range" data-setting="actionZoom" min="1" max="8" step="0.05" value="1.12" />
+
+                <label class="control-row">
+                  <span data-i18n="motion.backgroundSpeed">去星层速度</span>
+                  <output data-output="backgroundSpeed">0.24x</output>
+                </label>
+                <input type="range" data-setting="backgroundSpeed" min="0" max="8" step="0.05" value="0.24" />
+
+                <label class="control-row">
+                  <span data-i18n="motion.flightSpeed">真实星点动画速度</span>
+                  <output data-output="speed">0.08x</output>
+                </label>
+                <input type="range" data-setting="speed" min="0.01" max="2" step="0.01" value="0.08" />
+
+                <label class="control-row">
+                  <span data-i18n="motion.parallax">星层视差强度</span>
+                  <output data-output="parallax">1.25</output>
+                </label>
+                <input type="range" data-setting="parallax" min="0" max="4" step="0.05" value="1.25" />
+
+                <label class="control-row">
+                  <span data-i18n="motion.starDirectionSpeed">方向漂移强度</span>
+                  <output data-output="directionalDrift">0.12</output>
+                </label>
+                <input type="range" data-setting="directionalDrift" min="0" max="5" step="0.05" value="0.12" />
+
+                <label class="control-row">
+                  <span data-i18n="motion.backgroundZoom">背景基础缩放</span>
+                  <output data-output="backgroundZoom">1.08</output>
+                </label>
+                <input type="range" data-setting="backgroundZoom" min="1" max="4" step="0.01" value="1.08" />
+
+                <div class="toggle-line">
+                  <span data-i18n="motion.autoPanZoom">去星层平移时自动放大</span>
+                  <input type="checkbox" data-setting="autoPanZoom" checked />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="control-section" data-section="effects">
+            <button class="section-toggle" type="button" data-toggle-section="effects">
+              <span data-i18n="section.effects">特殊效果</span>
+              <span class="toggle-mark">+</span>
+            </button>
+            <div class="section-body">
+              <div class="effect-stack">
+                <label class="effect-toggle">
+                  <div>
+                    <strong data-i18n="effects.nebulaFadeIn">星云淡入效果</strong>
+                    <span data-i18n="effects.nebulaFadeInHelp">在视频开始时逐渐淡入星云</span>
+                  </div>
+                  <input type="checkbox" data-setting="nebulaFadeIn" />
+                </label>
+                <label class="effect-toggle">
+                  <div>
+                    <strong data-i18n="effects.nebulaFadeOut">星云淡出效果</strong>
+                    <span data-i18n="effects.nebulaFadeOutHelp">在视频生成过程中逐渐淡出星云</span>
+                  </div>
+                  <input type="checkbox" data-setting="nebulaFadeOut" />
+                </label>
+                <label class="effect-toggle">
+                  <div>
+                    <strong data-i18n="effects.hyperspace">超光速效果</strong>
+                    <span data-i18n="effects.hyperspaceHelp">增加运动模糊以实现更强的速度感</span>
+                  </div>
+                  <input type="checkbox" data-setting="hyperspaceEffect" />
+                </label>
+                <label class="effect-toggle">
+                  <div>
+                    <strong data-i18n="effects.ship">飞船效果</strong>
+                    <span data-i18n="effects.shipHelp">像飞船一样在开头加速，在结尾减速</span>
+                  </div>
+                  <input type="checkbox" data-setting="shipEffect" />
+                </label>
+                <label class="effect-toggle">
+                  <div>
+                    <strong data-i18n="effects.ease">曲速效果</strong>
+                    <span data-i18n="effects.easeHelp">在飞行过程中加入缓动变化</span>
+                  </div>
+                  <input type="checkbox" data-setting="easedMotion" />
+                </label>
+                <label class="effect-toggle">
+                  <div>
+                    <strong data-i18n="effects.smooth">双线性插值</strong>
+                    <span data-i18n="effects.smoothHelp">让预览与导出更平滑地缩放与混合</span>
+                  </div>
+                  <input type="checkbox" data-setting="smoothInterpolation" />
+                </label>
+              </div>
+              <div class="panel-block">
+                <label class="control-row">
+                  <span data-i18n="effects.speedRamp">连续变速曲线</span>
+                  <output data-output="speedRamp">线性</output>
+                </label>
+                <input type="range" data-setting="speedRamp" min="-1" max="1" step="0.05" value="0" />
+              </div>
+            </div>
+          </section>
+
+          <section class="control-section is-open" data-section="output">
+            <button class="section-toggle is-open" type="button" data-toggle-section="output">
+              <span data-i18n="section.output">输出设置</span>
+              <span class="toggle-mark">+</span>
+            </button>
+            <div class="section-body">
+              <div class="panel-block">
+                <label class="control-row">
+                  <span data-i18n="output.duration">持续时间（秒）</span>
+                  <output data-output="recordSeconds">4s</output>
+                </label>
+                <input type="range" data-setting="recordSeconds" min="4" max="12" step="2" value="4" />
+
+                <label>
+                  <span data-i18n="output.fps">帧率 (FPS)</span>
+                  <select data-setting="exportFps">
+                    <option value="30">30 fps (标准)</option>
+                    <option value="24">24 fps</option>
+                    <option value="60">60 fps</option>
+                  </select>
+                </label>
+
+                <label class="control-row">
+                  <span data-i18n="output.speedScale">速度倍率</span>
+                  <output data-output="masterSpeed">0.85x</output>
+                </label>
+                <input type="range" data-setting="masterSpeed" min="0.25" max="4" step="0.05" value="0.85" />
+
+                <label>
+                  <span data-i18n="output.size">输出分辨率</span>
+                  <select data-setting="exportSize">
+                    <option value="source">去星图原始尺寸 - 推荐</option>
+                    <option value="sourceHalf">去星图 1/2</option>
+                    <option value="1080p">按去星图比例 1080 宽</option>
+                    <option value="preview">当前预览</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span data-i18n="output.format">格式</span>
+                  <select data-setting="exportFormat">
+                    <option value="mp4">MP4</option>
+                    <option value="webm">WebM</option>
+                  </select>
+                </label>
+              </div>
+
+              <button id="download-video" class="wide-button output-button" type="button">
+                <i data-lucide="video"></i>
+                <span data-i18n="output.downloadVideo">下载视频</span>
+              </button>
+
+              <div class="export-status" id="export-status" data-i18n="status.waiting">等待上传素材</div>
+            </div>
+          </section>
+        </aside>
+
+        <section class="preview-panel" aria-label="preview panel">
+          <div class="preview-head">
+            <div>
+              <h2 data-i18n="preview.title">3D 星场预览</h2>
+              <span id="scene-readout" data-scene-readout data-i18n="readout.waiting">请上传去星图和星点图</span>
+            </div>
+          </div>
+
+          <div id="preview-stage" class="preview-stage">
+            <canvas id="star-canvas" aria-label="image based 3D starfield preview"></canvas>
+          </div>
+
+          <div class="preview-footer">
+            <button id="preview-play-toggle" class="ghost-button" type="button">
+              <i data-lucide="play"></i>
+              <span data-i18n="preview.play">播放</span>
+            </button>
+            <button id="preview-replay-toggle" class="ghost-button" type="button">
+              <i data-lucide="rotate-ccw"></i>
+              <span data-i18n="preview.replay">重播</span>
+            </button>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
