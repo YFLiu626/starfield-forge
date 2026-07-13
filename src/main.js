@@ -1981,9 +1981,21 @@ async function recordWebm() {
   if (state.exportFormat === "mp4" && actual.extension !== "mp4") {
     setStatus(statusText("mp4Fallback"));
   }
-  const recorderOptions = { videoBitsPerSecond: 10_000_000 };
+  const recorderOptions = { videoBitsPerSecond: getVideoBitrate(runtime.width, runtime.height, fps) };
   if (actual.mimeType) recorderOptions.mimeType = actual.mimeType;
-  const recorder = new MediaRecorder(stream, recorderOptions);
+
+  let recorder;
+  try {
+    recorder = new MediaRecorder(stream, recorderOptions);
+  } catch (error) {
+    stream.getTracks().forEach((track) => track.stop());
+    restore();
+    runtime.recordProgress = null;
+    runtime.recordStartedAt = null;
+    runtime.recordDuration = 0;
+    setStatus(`${statusText("recordingUnavailable")}: ${error.message}`);
+    return;
+  }
   runtime.recordedChunks = [];
   runtime.mediaRecorder = recorder;
   state.isRecording = true;
@@ -2000,7 +2012,8 @@ async function recordWebm() {
     link.href = url;
     link.download = `image-starfield-${seconds}s-${state.sourceSize.width}x${state.sourceSize.height}.${actual.extension}`;
     link.click();
-    URL.revokeObjectURL(url);
+    // Electron/Chromium may still be reading the Blob URL after click() returns.
+    window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
     state.isRecording = false;
     runtime.recordProgress = null;
     runtime.recordStartedAt = null;
@@ -2011,7 +2024,12 @@ async function recordWebm() {
     setStatus(statusText("videoExported", actual.extension.toUpperCase()));
   });
 
-  recorder.start();
+  recorder.addEventListener("error", (event) => {
+    setStatus(`${statusText("recordingUnavailable")}: ${event.error?.message || "encoder error"}`);
+  });
+
+  // Periodic chunks reduce peak memory use for longer recordings.
+  recorder.start(1000);
   const start = performance.now();
   const timer = window.setInterval(() => {
     const elapsed = (performance.now() - start) / 1000;
@@ -2082,6 +2100,12 @@ function getExportDimensions() {
     return { width: 1080, height: Math.round(1080 / (source.width / source.height)) };
   }
   return null;
+}
+
+function getVideoBitrate(width, height, fps) {
+  const pixelsPerSecond = Math.max(1, width) * Math.max(1, height) * Math.max(1, fps);
+  // Scale bitrate with output workload while keeping browser encoders in a practical range.
+  return Math.round(clamp(pixelsPerSecond * 0.12, 6_000_000, 48_000_000));
 }
 
 function chooseRecordingFormat(format) {
