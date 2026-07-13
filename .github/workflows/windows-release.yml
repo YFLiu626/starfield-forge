@@ -1,0 +1,84 @@
+name: Build Windows Installer
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/windows-release.yml"
+      - "src/**"
+      - "electron/**"
+      - "build/**"
+      - "index.html"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.js"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-release
+  cancel-in-progress: true
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build Windows installer
+        run: npm run package:installer
+
+      - name: Read package version
+        id: version
+        shell: pwsh
+        run: |
+          $package = Get-Content package.json -Raw | ConvertFrom-Json
+          "tag=v$($package.version)" >> $env:GITHUB_OUTPUT
+          "version=$($package.version)" >> $env:GITHUB_OUTPUT
+
+      - name: Publish installer to GitHub Releases
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $assets = Get-ChildItem "release/*.exe"
+          if (-not $assets) {
+            throw "No Windows installer was generated."
+          }
+
+          gh release view $env:RELEASE_TAG 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            foreach ($asset in $assets) {
+              gh release upload $env:RELEASE_TAG $asset.FullName --clobber
+            }
+            gh release edit $env:RELEASE_TAG --title "3D 星场生成器 $env:RELEASE_VERSION" --latest
+          } else {
+            gh release create $env:RELEASE_TAG $assets.FullName --title "3D 星场生成器 $env:RELEASE_VERSION" --notes "Windows x64 安装程序。支持 TIF、TIFF、PNG、JPG/JPEG、WebP 和 BMP 图像输入。" --latest
+          }
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: 3D-Starfield-Generator-Windows-x64
+          path: release/*.exe
+          if-no-files-found: error
+          retention-days: 30
