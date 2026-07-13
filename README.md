@@ -26,6 +26,12 @@
 - 支持 WebGL 2 的现代浏览器或 Electron
 - 高分辨率输出建议使用独立显卡并预留足够显存
 
+## 直接下载安装
+
+Windows x64 用户可在 [GitHub Releases](https://github.com/YFLiu626/starfield-forge/releases/latest) 下载最新的 `3D-Starfield-Generator-Setup-*.exe`，双击即可安装，无需另外安装 Node.js。
+
+> 安装包尚未进行商业代码签名。Windows SmartScreen 首次运行时可能显示“未知发布者”，请确认下载来源为本仓库。
+
 ## 快速开始
 
 ```bash
